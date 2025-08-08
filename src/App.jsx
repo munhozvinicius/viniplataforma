@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+
+import { DataService } from './services/dataService.js';
 import { Button } from '@/components/ui/button.jsx'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.jsx'
 import { Badge } from '@/components/ui/badge.jsx'
@@ -133,6 +135,23 @@ function App() {
     cardsPersonalizados: []
   })
   const [produtos, setProdutos] = useState([
+
+  // Carrega configurações e produtos do banco (page_configs)
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const homeCfg = await DataService.getConfig('home');
+        if (!cancelled && homeCfg?.value) setConfigHome(homeCfg.value);
+      } catch (_) {}
+      try {
+        const prods = await DataService.getConfig('produtos');
+        if (!cancelled && Array.isArray(prods?.value)) setProdutos(prods.value);
+      } catch (_) {}
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
     {
       id: 'ajuda-ai-ia',
       emoji: '🤖',
@@ -513,14 +532,14 @@ function App() {
         <TabsContent value="produtos" className="space-y-6">
           <AdminProdutos 
             produtos={produtos} 
-            onProdutosChange={setProdutos}
+            onProdutosChange={(list)=>{ setProdutos(list); DataService.setConfig('produtos', list).catch(()=>{}); }}
           />
         </TabsContent>
 
         <TabsContent value="home" className="space-y-6">
           <AdminHome 
             configHome={configHome} 
-            onConfigChange={setConfigHome}
+            onConfigChange={(cfg)=>{ setConfigHome(cfg); DataService.setConfig('home', cfg).catch(()=>{}); }}
           />
         </TabsContent>
 
