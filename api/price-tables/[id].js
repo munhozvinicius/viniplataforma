@@ -1,0 +1,45 @@
+// api/price-tables/[id].js
+import { sql, ensureSchema } from '../_lib/db.js';
+import { getJsonBody, send } from '../_lib/util.js';
+
+export default async function handler(req, res) {
+  try {
+    await ensureSchema();
+    const id = (req.url.split('/').pop() || '').split('?')[0];
+    if (!id) return send(res, 400, { error: 'missing id' });
+
+    if (req.method === 'PUT' || req.method === 'PATCH') {
+      const body = await getJsonBody(req);
+      const { plan, monthly, annual, notes } = body || {};
+      const rows = await sql`
+        UPDATE price_tables
+           SET plan = COALESCE(${plan}, plan),
+               monthly = COALESCE(${monthly}, monthly),
+               annual = COALESCE(${annual}, annual),
+               notes = COALESCE(${notes}, notes),
+               updated_at = NOW()
+         WHERE id = ${id}
+         RETURNING *;
+      `;
+      if (!rows.length) return send(res, 404, { error: 'not found' });
+      return send(res, 200, rows[0]);
+    }
+
+    if (req.method === 'DELETE') {
+      await sql`DELETE FROM price_tables WHERE id = ${id};`;
+      return send(res, 204, {});
+    }
+
+    if (req.method === 'GET') {
+      const rows = await sql`SELECT * FROM price_tables WHERE id = ${id};`;
+      if (!rows.length) return send(res, 404, { error: 'not found' });
+      return send(res, 200, rows[0]);
+    }
+
+    res.setHeader('Allow', 'GET, PUT, PATCH, DELETE');
+    return send(res, 405, { error: 'Method Not Allowed' });
+  } catch (e) {
+    console.error(e);
+    return send(res, 500, { error: 'Internal Error', detail: String(e) });
+  }
+}
