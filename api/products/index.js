@@ -1,29 +1,3 @@
-// api/products/index.js
 import { sql, ensureSchema } from '../_lib/db.js';
 import { getJsonBody, send } from '../_lib/util.js';
-
-export default async function handler(req, res) {
-  try {
-    await ensureSchema();
-    if (req.method === 'GET') {
-      const rows = await sql`SELECT * FROM products ORDER BY updated_at DESC;`;
-      return send(res, 200, rows);
-    }
-    if (req.method === 'POST') {
-      const body = await getJsonBody(req);
-      const { name, description = null, price = null, active = true } = body || {};
-      if (!name) return send(res, 400, { error: 'name is required' });
-      const rows = await sql`
-        INSERT INTO products (name, description, price, active)
-        VALUES (${name}, ${description}, ${price}, ${active})
-        RETURNING *;
-      `;
-      return send(res, 201, rows[0]);
-    }
-    res.setHeader('Allow', 'GET, POST');
-    return send(res, 405, { error: 'Method Not Allowed' });
-  } catch (e) {
-    console.error(e);
-    return send(res, 500, { error: 'Internal Error', detail: String(e) });
-  }
-}
+export default async function handler(req,res){try{await ensureSchema();if(req.method==='GET'){const rows=await sql`SELECT * FROM products ORDER BY updated_at DESC;`;return send(res,200,rows)}if(req.method==='POST'){const b=await getJsonBody(req);const {name,description=null,price=null,active=true}=b||{};if(!name)return send(res,400,{error:'name is required'});const rows=await sql`INSERT INTO products (name,description,price,active) VALUES (${name},${description},${price},${active}) RETURNING *;`;return send(res,201,rows[0])}res.setHeader('Allow','GET, POST');return send(res,405,{error:'Method Not Allowed'})}catch(e){console.error(e);return send(res,500,{error:'Internal Error',detail:String(e)})}}
