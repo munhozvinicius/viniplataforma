@@ -133,41 +133,8 @@ function App() {
     },
     cardsPersonalizados: []
   })
-  const [produtos, setProdutos] = useState([
 
-  // Carrega configurações e produtos do banco (page_configs) e faz merge com defaults
-  useEffect(() => {
-    let cancelled = false;
-    const defaultsHome = {
-      hero: { titulo: 'Bem-vindo à Plataforma do Vini', subtitulo: '', descricao: '', corFundo: '#663399', imagemFundo: '' },
-      atualizacoes: { titulo: 'Atualizações Recentes', mostrar: true, itens: [] },
-      produtos: { titulo: 'Produtos Disponíveis', subtitulo: '', layoutCards: 'grid', mostrarContadores: true },
-      cardsPersonalizados: []
-    };
-    async function load() {
-      try {
-        const homeCfg = await DataService.getConfig('home');
-        if (!cancelled && homeCfg?.value) {
-          const v = homeCfg.value || {};
-          const merged = {
-            ...defaultsHome,
-            ...v,
-            hero: { ...defaultsHome.hero, ...(v.hero || {}) },
-            atualizacoes: { ...defaultsHome.atualizacoes, ...(v.atualizacoes || {}) },
-            produtos: { ...defaultsHome.produtos, ...(v.produtos || {}) },
-            cardsPersonalizados: Array.isArray(v.cardsPersonalizados) ? v.cardsPersonalizados : []
-          };
-          setConfigHome(merged);
-        }
-      } catch {}
-      try {
-        const prods = await DataService.getConfig('produtos');
-        if (!cancelled && Array.isArray(prods?.value)) setProdutos(prods.value);
-      } catch {}
-    }
-    load();
-    return () => { cancelled = true; };
-  }, []);
+  const [produtos, setProdutos] = useState([
     {
       id: 'ajuda-ai-ia',
       emoji: '🤖',
@@ -204,17 +171,51 @@ function App() {
         }
       ]
     }
-  ])
+  ]) // <<< fecha o array ANTES do useEffect
+
+  // Carrega configurações e produtos do banco (page_configs) e faz merge com defaults
+  useEffect(() => {
+    let cancelled = false
+    const defaultsHome = {
+      hero: { titulo: 'Bem-vindo à Plataforma do Vini', subtitulo: '', descricao: '', corFundo: '#663399', imagemFundo: '' },
+      atualizacoes: { titulo: 'Atualizações Recentes', mostrar: true, itens: [] },
+      produtos: { titulo: 'Produtos Disponíveis', subtitulo: '', layoutCards: 'grid', mostrarContadores: true },
+      cardsPersonalizados: []
+    }
+
+    async function load() {
+      try {
+        const homeCfg = await DataService.getConfig('home')
+        if (!cancelled && homeCfg?.value) {
+          const v = homeCfg.value || {}
+          const merged = {
+            ...defaultsHome,
+            ...v,
+            hero: { ...defaultsHome.hero, ...(v.hero || {}) },
+            atualizacoes: { ...defaultsHome.atualizacoes, ...(v.atualizacoes || {}) },
+            produtos: { ...defaultsHome.produtos, ...(v.produtos || {}) },
+            cardsPersonalizados: Array.isArray(v.cardsPersonalizados) ? v.cardsPersonalizados : []
+          }
+          setConfigHome(merged)
+        }
+      } catch {}
+
+      try {
+        const prods = await DataService.getConfig('produtos')
+        if (!cancelled && Array.isArray(prods?.value)) setProdutos(prods.value)
+      } catch {}
+    }
+
+    load()
+    return () => { cancelled = true }
+  }, [])
 
   // Simula carregamento inicial dos dados do GitHub
   useEffect(() => {
-    // Em uma implementação real, aqui faria uma requisição para carregar os dados do GitHub
     const carregarDadosGitHub = async () => {
-      // Simular carregamento
       await new Promise(resolve => setTimeout(resolve, 1000))
       setDadosSincronizados(true)
     }
-    
     carregarDadosGitHub()
   }, [])
 
@@ -231,7 +232,6 @@ function App() {
   const handleSincronizacaoCompleta = (novosProdutos) => {
     setProdutos(novosProdutos)
     setDadosSincronizados(true)
-    // Adicionar notificação de sucesso aqui se necessário
   }
 
   const renderHome = () => (
@@ -688,4 +688,3 @@ function App() {
 }
 
 export default App
-
