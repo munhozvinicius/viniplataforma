@@ -1,110 +1,141 @@
-import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.jsx'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.jsx'
-import { Input } from '@/components/ui/input.jsx'
-import { Textarea } from '@/components/ui/textarea.jsx'
-import { Button } from '@/components/ui/button.jsx'
-import { DataService } from '@/services/dataService.js'
+// src/components/AdminHome.jsx
+import React, { useEffect, useState } from 'react';
+import { DataService } from '@/services/dataService.js';
 
-export default function AdminHome({ configHome, onConfigChange }) {
-  const [localCfg, setLocalCfg] = useState(configHome)
+export default function AdminHome() {
+  const [configHome, setConfigHome] = useState({ hero: {}, cardsPersonalizados: [] });
 
-  const salvar = async () => {
+  useEffect(() => {
+    DataService.getHome().then(v => {
+      const safe = v || {};
+      safe.hero = safe.hero || {};
+      safe.cardsPersonalizados = Array.isArray(safe.cardsPersonalizados) ? safe.cardsPersonalizados : [];
+      setConfigHome(safe);
+    }).catch(() => {});
+  }, []);
+
+  const salvarHome = async () => {
     try {
-      await DataService.setConfig('home', localCfg)
-      onConfigChange(localCfg)
-      alert('Home salva com sucesso!')
-    } catch (e) {
-      console.error(e)
-      alert('Falhou ao salvar a Home.')
+      await DataService.salvarHome(configHome);
+      alert('Home salva com sucesso.');
+    } catch {
+      alert('Erro ao salvar Home.');
     }
-  }
+  };
+
+  const onChangeHero = (campo, valor) => {
+    setConfigHome(prev => ({ ...prev, hero: { ...(prev.hero||{}), [campo]: valor } }));
+  };
+
+  const addCard = () => {
+    setConfigHome(prev => ({
+      ...prev,
+      cardsPersonalizados: [
+        ...(prev.cardsPersonalizados || []),
+        {
+          id: (globalThis.crypto?.randomUUID?.() ?? String(Date.now()+Math.random())),
+          ativo: true,
+          icone: '🧩',
+          titulo: 'Novo Card',
+          descricao: '',
+          cor: '#663399',
+          link: ''
+        }
+      ]
+    }));
+  };
+
+  const updateCard = (id, patch) => {
+    setConfigHome(prev => ({
+      ...prev,
+      cardsPersonalizados: (prev.cardsPersonalizados || []).map(c => c.id === id ? { ...c, ...patch } : c)
+    }));
+  };
+
+  const removeCard = (id) => {
+    setConfigHome(prev => ({
+      ...prev,
+      cardsPersonalizados: (prev.cardsPersonalizados || []).filter(c => c.id !== id)
+    }));
+  };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Editor da Tela Inicial</CardTitle>
-          <CardDescription>Personalize completamente a página inicial da plataforma</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="principal" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="principal">Conteúdo Principal</TabsTrigger>
-              <TabsTrigger value="avisos">Avisos e Atualizações</TabsTrigger>
-              <TabsTrigger value="layout">Layout e Aparência</TabsTrigger>
-              <TabsTrigger value="cards">Cards Personalizados</TabsTrigger>
-            </TabsList>
+    <div className="p-4 space-y-4">
+      <h1 className="text-xl font-bold">Editor da Home</h1>
 
-            <TabsContent value="principal" className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="text-sm font-medium">Título Principal</label>
-                  <Input value={localCfg.hero.titulo} onChange={e => setLocalCfg(s => ({ ...s, hero: { ...s.hero, titulo: e.target.value } }))} />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Subtítulo</label>
-                  <Input value={localCfg.hero.subtitulo} onChange={e => setLocalCfg(s => ({ ...s, hero: { ...s.hero, subtitulo: e.target.value } }))} />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-sm font-medium">Descrição</label>
-                  <Textarea value={localCfg.hero.descricao} onChange={e => setLocalCfg(s => ({ ...s, hero: { ...s.hero, descricao: e.target.value } }))} />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Cor de Fundo</label>
-                  <Input value={localCfg.hero.corFundo} onChange={e => setLocalCfg(s => ({ ...s, hero: { ...s.hero, corFundo: e.target.value } }))} />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Imagem de Fundo (URL)</label>
-                  <Input value={localCfg.hero.imagemFundo} onChange={e => setLocalCfg(s => ({ ...s, hero: { ...s.hero, imagemFundo: e.target.value } }))} />
-                </div>
-              </div>
-              <div className="flex justify-end">
-                <Button onClick={salvar}>Salvar e Publicar Home</Button>
-              </div>
-            </TabsContent>
+      <div>
+        <label className="block text-sm">Cor de Fundo</label>
+        <input
+          type="color"
+          value={configHome.hero.corFundo || '#663399'}
+          onChange={e => onChangeHero('corFundo', e.target.value)}
+        />
+      </div>
 
-            <TabsContent value="avisos" className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Título da Seção</label>
-                <Input value={localCfg.atualizacoes.titulo} onChange={e => setLocalCfg(s => ({ ...s, atualizacoes: { ...s.atualizacoes, titulo: e.target.value } }))} />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Mostrar seção?</label>
-                <Button variant="outline" onClick={() => setLocalCfg(s => ({ ...s, atualizacoes: { ...s.atualizacoes, mostrar: !s.atualizacoes.mostrar } }))}>
-                  {localCfg.atualizacoes.mostrar ? 'Ocultar' : 'Mostrar'}
-                </Button>
-              </div>
-              <div className="flex justify-end">
-                <Button onClick={salvar}>Salvar e Publicar Home</Button>
-              </div>
-            </TabsContent>
+      <div>
+        <label className="block text-sm">Imagem de Fundo (URL)</label>
+        <input
+          type="text"
+          value={configHome.hero.imagemFundo || ''}
+          onChange={e => onChangeHero('imagemFundo', e.target.value)}
+          className="border p-1 w-full"
+          placeholder="https://exemplo.com/imagem.jpg"
+        />
+      </div>
 
-            <TabsContent value="layout" className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Título da Seção de Produtos</label>
-                  <Input value={localCfg.produtos.titulo} onChange={e => setLocalCfg(s => ({ ...s, produtos: { ...s.produtos, titulo: e.target.value } }))} />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Subtítulo</label>
-                  <Input value={localCfg.produtos.subtitulo} onChange={e => setLocalCfg(s => ({ ...s, produtos: { ...s.produtos, subtitulo: e.target.value } }))} />
-                </div>
-              </div>
-              <div className="flex justify-end">
-                <Button onClick={salvar}>Salvar e Publicar Home</Button>
-              </div>
-            </TabsContent>
+      <div>
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold">Cards Personalizados</h2>
+          <button onClick={addCard} className="bg-green-600 text-white px-3 py-1 rounded">+ Adicionar Card</button>
+        </div>
 
-            <TabsContent value="cards" className="space-y-4">
-              <p className="text-sm text-muted-foreground">Gerencie seus cards personalizados aqui (opcional).</p>
-              <div className="flex justify-end">
-                <Button onClick={salvar}>Salvar e Publicar Home</Button>
+        <div className="mt-2 space-y-2">
+          {(configHome.cardsPersonalizados || []).map(card => (
+            <div key={card.id} className="border p-2 rounded space-y-2">
+              <div className="flex gap-2">
+                <input
+                  value={card.titulo}
+                  onChange={e => updateCard(card.id, { titulo: e.target.value })}
+                  className="border p-1 flex-1"
+                  placeholder="Título"
+                />
+                <input
+                  value={card.descricao}
+                  onChange={e => updateCard(card.id, { descricao: e.target.value })}
+                  className="border p-1 flex-1"
+                  placeholder="Descrição"
+                />
               </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+              <div className="flex gap-2">
+                <input
+                  type="color"
+                  value={card.cor || '#663399'}
+                  onChange={e => updateCard(card.id, { cor: e.target.value })}
+                />
+                <input
+                  value={card.link || ''}
+                  onChange={e => updateCard(card.id, { link: e.target.value })}
+                  className="border p-1 flex-1"
+                  placeholder="https://link-do-card"
+                />
+                <label className="flex items-center gap-1 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={card.ativo ?? true}
+                    onChange={e => updateCard(card.id, { ativo: e.target.checked })}
+                  />
+                  Ativo
+                </label>
+                <button onClick={() => removeCard(card.id)} className="bg-red-600 text-white px-3 py-1 rounded">Remover</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="pt-2">
+        <button onClick={salvarHome} className="bg-blue-600 text-white px-4 py-2 rounded">Salvar Home</button>
+      </div>
     </div>
-  )
+  );
 }
