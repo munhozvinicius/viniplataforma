@@ -1,19 +1,42 @@
-async function jsonFetch(url, options = {}) {
-  const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
+// src/services/dataService.js
+
 export const DataService = {
-  listProducts: () => jsonFetch('/api/products'),
-  createProduct: (payload) => jsonFetch('/api/products', { method: 'POST', body: JSON.stringify(payload) }),
-  getProduct: (id) => jsonFetch(`/api/products/${id}`),
-  updateProduct: (id, payload) => jsonFetch(`/api/products/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
-  deleteProduct: (id) => jsonFetch(`/api/products/${id}`, { method: 'DELETE' }),
-  listPriceTables: () => jsonFetch('/api/price-tables'),
-  createPriceTable: (payload) => jsonFetch('/api/price-tables', { method: 'POST', body: JSON.stringify(payload) }),
-  getPriceTable: (id) => jsonFetch(`/api/price-tables/${id}`),
-  updatePriceTable: (id, payload) => jsonFetch(`/api/price-tables/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
-  deletePriceTable: (id) => jsonFetch(`/api/price-tables/${id}`, { method: 'DELETE' }),
-  getConfig: (key='home') => jsonFetch(`/api/configs?key=${encodeURIComponent(key)}`),
-  setConfig: (key, value) => jsonFetch(`/api/configs?key=${encodeURIComponent(key)}`, { method: 'PUT', body: JSON.stringify({ value }) }),
+  async getConfig(key) {
+    const r = await fetch(`/api/configs?key=${encodeURIComponent(key)}`);
+    if (!r.ok) throw new Error('GET config failed');
+    return r.json();
+  },
+  async setConfig(key, value) {
+    const r = await fetch(`/api/configs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, value })
+    });
+    if (!r.ok) throw new Error('POST config failed');
+    return r.json();
+  },
+  async getProdutos() {
+    const res = await this.getConfig('produtos');
+    return Array.isArray(res?.value) ? res.value : [];
+  },
+  async salvarProdutos(lista) {
+    const safe = (lista || []).map(p => ({
+      id: p.id || (globalThis.crypto?.randomUUID?.() ?? String(Date.now()+Math.random())),
+      emoji: p.emoji || '🧩',
+      titulo: p.titulo || '',
+      subtitulo: p.subtitulo || '',
+      caracteristicas: p.caracteristicas || '',
+      tabelas: Array.isArray(p.tabelas) ? p.tabelas : [],
+      observacoes: p.observacoes || '',
+      agentesIA: Array.isArray(p.agentesIA) ? p.agentesIA : []
+    }));
+    return this.setConfig('produtos', safe);
+  },
+  async getHome() {
+    const res = await this.getConfig('home');
+    return res?.value || {};
+  },
+  async salvarHome(config) {
+    return this.setConfig('home', config || {});
+  }
 };
