@@ -22,8 +22,16 @@ export default async function handler(req, res) {
     try {
       if (typeof body === 'string') body = JSON.parse(body);
       const { key, value } = body || {};
-      if (!key) return res.status(400).json({ error: 'Missing key' });
-      await sql`INSERT INTO page_configs (key, value) VALUES (${key}, ${JSON.stringify(value)}::jsonb)
+      let jsonValue = value;
+      if (typeof value === 'string') {
+        try {
+          jsonValue = JSON.parse(value);
+        } catch (e) {
+          // If it's a string but not valid JSON, keep it as is or handle as needed
+          console.warn('Value is a string but not valid JSON, treating as plain text:', value);
+        }
+      }
+      await sql`INSERT INTO page_configs (key, value) VALUES (${key}, ${JSON.stringify(jsonValue)}::jsonb)
                 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`;
       return res.status(200).json({ ok: true, key });
     } catch (e) {
